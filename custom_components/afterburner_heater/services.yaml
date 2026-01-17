@@ -1,0 +1,171 @@
+send_json:
+  name: Send JSON
+  description: Send a JSON message or command to the heater over the active transport.
+  fields:
+    payload:
+      name: Payload
+      description: JSON string or object to send (exclusive with cmd/value).
+      required: false
+      selector:
+        text:
+    cmd:
+      name: Command
+      description: Command key to send (exclusive with payload).
+      required: false
+      selector:
+        text:
+    value:
+      name: Value
+      description: Value to send with cmd.
+      required: false
+set_cyclic_temp:
+  name: Set Cyclic Temp
+  description: Set the cyclic target temperature.
+  fields:
+    value:
+      name: Value
+      description: Cyclic temperature (float).
+      required: true
+      selector:
+        number:
+          mode: box
+set_cyclic_on:
+  name: Set Cyclic On
+  description: Set cyclic on threshold.
+  fields:
+    value:
+      name: Value
+      description: Cyclic on threshold (float).
+      required: true
+      selector:
+        number:
+          mode: box
+set_cyclic_off:
+  name: Set Cyclic Off
+  description: Set cyclic off threshold.
+  fields:
+    value:
+      name: Value
+      description: Cyclic off threshold (float).
+      required: true
+      selector:
+        number:
+          mode: box
+set_cyclic_enabled:
+  name: Set Cyclic Enabled
+  description: Enable or disable cyclic mode.
+  fields:
+    value:
+      name: Value
+      description: 1 to enable, 0 to disable.
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 1
+          mode: box
+set_frost_enable:
+  name: Set Frost Enable
+  description: Enable or disable frost mode.
+  fields:
+    value:
+      name: Value
+      description: 1 to enable, 0 to disable.
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 1
+          mode: box
+set_frost_on:
+  name: Set Frost On
+  description: Set frost-on threshold.
+  fields:
+    value:
+      name: Value
+      description: Frost on threshold (float).
+      required: true
+      selector:
+        number:
+          mode: box
+set_frost_rise:
+  name: Set Frost Rise
+  description: Set frost rise value.
+  fields:
+    value:
+      name: Value
+      description: Frost rise value (float).
+      required: true
+      selector:
+        number:
+          mode: box
+set_frost_target:
+  name: Set Frost Target
+  description: Set frost target temperature.
+  fields:
+    value:
+      name: Value
+      description: Frost target (float).
+      required: true
+      selector:
+        number:
+          mode: box
+set_thermostat:
+  name: Set Thermostat
+  description: Enable or disable thermostat.
+  fields:
+    value:
+      name: Value
+      description: 1 to enable, 0 to disable.
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 1
+          mode: box
+set_thermostat_mode:
+  name: Set Thermostat Mode
+  description: Set thermostat mode string.
+  fields:
+    value:
+      name: Value
+      description: Mode string (e.g. Linear Hz, Deadband, Standard, Stop/Start).
+      required: true
+      selector:
+        text:
+set_fixed_demand:
+  name: Set Fixed Demand
+  description: Set fixed demand value or clear it.
+  fields:
+    value:
+      name: Value
+      description: Fixed demand (float) or null to clear.
+      required: true
+      selector:
+        text:
+set_gpout1:
+  name: Set GPout1
+  description: Set GPout1 output.
+  fields:
+    value:
+      name: Value
+      description: 1 to enable, 0 to disable.
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 1
+          mode: box
+set_gpout2:
+  name: Set GPout2
+  description: Set GPout2 output.
+  fields:
+    value:
+      name: Value
+      description: 1 to enable, 0 to disable.
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 1
+          mode: box

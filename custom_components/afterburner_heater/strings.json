@@ -1,0 +1,53 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Select Transport",
+        "description": "Choose how to connect to the heater.",
+        "data": {
+          "transport": "Transport"
+        }
+      },
+      "ble": {
+        "title": "Select BLE Heater",
+        "description": "Select a BLE device or enter its address manually.",
+        "data": {
+          "address": "Bluetooth Address",
+          "manual_address": "Manual Bluetooth Address"
+        }
+      },
+      "websocket": {
+        "title": "WebSocket Settings",
+        "description": "Enter the WebSocket connection details.",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "path": "Path",
+          "access_token": "Token"
+        }
+      }
+    },
+    "error": {
+      "invalid_address": "Invalid Bluetooth address"
+    },
+    "abort": {
+      "already_configured": "Device is already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Afterburner Heater Options",
+        "data": {
+          "scan_interval": "Update interval (seconds)",
+          "ble_write_char": "BLE write characteristic",
+          "ble_write_with_response": "Write with response",
+          "ble_init_message": "BLE init JSON",
+          "ble_append_newline": "BLE append newline",
+          "path": "WebSocket path",
+          "ws_init_message": "WebSocket init JSON"
+        }
+      }
+    }
+  }
+}
