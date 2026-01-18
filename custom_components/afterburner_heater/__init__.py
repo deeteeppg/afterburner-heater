@@ -8,8 +8,9 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+from dataclasses import dataclass
 from datetime import timedelta
-from typing import Any
+from typing import Any, TypeAlias
 
 import voluptuous as vol
 
@@ -24,8 +25,10 @@ from homeassistant.const import (
     Platform,
 )
 from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import UpdateFailed
 
+from .api.base import HeaterApi
 from .api.ble import BleHeaterApi
 from .api.ws import WebSocketHeaterApi
 from .const import (
@@ -69,6 +72,18 @@ from .coordinator import AfterburnerCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
+
+@dataclass
+class AfterburnerRuntimeData:
+    """Runtime data for an Afterburner Heater config entry."""
+
+    coordinator: AfterburnerCoordinator
+    api: HeaterApi
+    transport: str
+
+
+AfterburnerConfigEntry: TypeAlias = ConfigEntry[AfterburnerRuntimeData]
+
 PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
     Platform.CLIMATE,
@@ -79,7 +94,7 @@ PLATFORMS: list[Platform] = [
 ]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: AfterburnerConfigEntry) -> bool:
     """Set up Afterburner Heater from a config entry."""
     hass.data.setdefault(DOMAIN, {})
 
@@ -156,11 +171,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await coordinator.async_start()
     await coordinator.async_config_entry_first_refresh()
 
-    hass.data[DOMAIN][entry.entry_id] = {
-        "coordinator": coordinator,
-        "api": api,
-        "transport": transport,
-    }
+    entry.runtime_data = AfterburnerRuntimeData(
+        coordinator=coordinator,
+        api=api,
+        transport=transport,
+    )
+
+    # Keep hass.data for service access across all entries
+    hass.data[DOMAIN][entry.entry_id] = entry.runtime_data
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     await _async_register_services(hass)
@@ -168,14 +186,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: AfterburnerConfigEntry) -> bool:
     """Unload a config entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(
         entry, PLATFORMS
     )
     if unload_ok:
-        coordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
-        await coordinator.async_stop()
+        await entry.runtime_data.coordinator.async_stop()
         hass.data[DOMAIN].pop(entry.entry_id)
     return unload_ok
 
@@ -186,12 +203,19 @@ async def _async_register_services(hass: HomeAssistant) -> None:
 
     async def _async_send_payload(payload_obj: dict[str, Any]) -> None:
         tasks = []
-        for entry_data in hass.data.get(DOMAIN, {}).values():
-            api = entry_data.get("api")
-            if api:
-                tasks.append(api.async_send_json(payload_obj))
+        for runtime_data in hass.data.get(DOMAIN, {}).values():
+            if isinstance(runtime_data, AfterburnerRuntimeData):
+                tasks.append(runtime_data.api.async_send_json(payload_obj))
         if tasks:
-            await asyncio.gather(*tasks)
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            errors = [r for r in results if isinstance(r, Exception)]
+            if errors:
+                _LOGGER.warning(
+                    "Some heaters failed to receive command: %s",
+                    [str(e) for e in errors],
+                )
+                if len(errors) == len(tasks):
+                    raise HomeAssistantError("All heaters failed to receive command")
 
     async def _handle_send_json(call: ServiceCall) -> None:
         cmd = call.data.get(ATTR_CMD)
@@ -200,22 +224,22 @@ async def _async_register_services(hass: HomeAssistant) -> None:
 
         if cmd is not None:
             if payload is not None:
-                raise vol.Invalid("Provide either payload or cmd/value")
+                raise HomeAssistantError("Provide either payload or cmd/value, not both")
             if value is None:
-                raise vol.Invalid("cmd requires value")
+                raise HomeAssistantError("cmd requires a value parameter")
             payload_obj = {cmd: value}
         else:
             if payload is None:
-                raise vol.Invalid("payload is required when cmd is not provided")
+                raise HomeAssistantError("payload is required when cmd is not provided")
             if isinstance(payload, str):
                 try:
                     payload_obj = json.loads(payload)
                 except json.JSONDecodeError as err:
-                    raise vol.Invalid("Invalid JSON payload") from err
+                    raise HomeAssistantError(f"Invalid JSON payload: {err}") from err
             elif isinstance(payload, dict):
                 payload_obj = payload
             else:
-                raise vol.Invalid("Payload must be JSON string or dict")
+                raise HomeAssistantError("Payload must be a JSON string or dict")
 
         await _async_send_payload(payload_obj)
 
@@ -240,7 +264,7 @@ async def _async_register_services(hass: HomeAssistant) -> None:
         async def _handler(call: ServiceCall) -> None:
             value = call.data.get("value")
             if value is None:
-                raise vol.Invalid("value is required")
+                raise HomeAssistantError(f"value is required for {service_name}")
             await _async_send_payload({cmd_key: value})
 
         hass.services.async_register(

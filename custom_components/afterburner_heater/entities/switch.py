@@ -5,9 +5,10 @@ https://github.com/tonylofgren/aurora-smart-home
 """
 from __future__ import annotations
 
-from typing import cast
+from typing import Any, cast
 
 from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -21,37 +22,35 @@ from ..protocol import HeaterState, raw_bool
 SWITCH_DESCRIPTIONS: tuple[SwitchEntityDescription, ...] = (
     SwitchEntityDescription(
         key="CyclicEnb",
-        name="Cyclic Enable",
+        translation_key="CyclicEnb",
     ),
     SwitchEntityDescription(
         key="FrostEnable",
-        name="Frost Enable",
+        translation_key="FrostEnable",
     ),
     SwitchEntityDescription(
         key="Thermostat",
-        name="Thermostat Enable",
+        translation_key="Thermostat",
     ),
     SwitchEntityDescription(
         key="GPout1",
-        name="GP Out 1",
+        translation_key="GPout1",
     ),
     SwitchEntityDescription(
         key="GPout2",
-        name="GP Out 2",
+        translation_key="GPout2",
     ),
 )
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry,
+    entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Afterburner Heater switches."""
-    coordinator: AfterburnerCoordinator = hass.data[DOMAIN][entry.entry_id][
-        "coordinator"
-    ]
-    entities = [AfterburnerPowerSwitch(coordinator, entry)]
+    coordinator: AfterburnerCoordinator = entry.runtime_data.coordinator
+    entities: list[SwitchEntity] = [AfterburnerPowerSwitch(coordinator, entry)]
     entities.extend(
         AfterburnerCommandSwitch(coordinator, entry, description)
         for description in SWITCH_DESCRIPTIONS
@@ -65,9 +64,9 @@ class AfterburnerPowerSwitch(
     """Representation of the Afterburner Heater power switch."""
 
     _attr_has_entity_name = True
-    _attr_name = "Power"
+    _attr_translation_key = "power"
 
-    def __init__(self, coordinator: AfterburnerCoordinator, entry) -> None:
+    def __init__(self, coordinator: AfterburnerCoordinator, entry: ConfigEntry) -> None:
         super().__init__(coordinator)
         self._attr_unique_id = f"{entry.entry_id}-power"
         self._attr_device_info = DeviceInfo(
@@ -90,10 +89,10 @@ class AfterburnerPowerSwitch(
             return None
         return state.power
 
-    async def async_turn_on(self, **kwargs) -> None:
+    async def async_turn_on(self, **kwargs: Any) -> None:
         await self.coordinator._api.async_send_json({"Run": "heat"})
 
-    async def async_turn_off(self, **kwargs) -> None:
+    async def async_turn_off(self, **kwargs: Any) -> None:
         await self.coordinator._api.async_send_json({"Run": "off"})
 
 
@@ -107,7 +106,7 @@ class AfterburnerCommandSwitch(
     def __init__(
         self,
         coordinator: AfterburnerCoordinator,
-        entry,
+        entry: ConfigEntry,
         description: SwitchEntityDescription,
     ) -> None:
         super().__init__(coordinator)
@@ -126,12 +125,12 @@ class AfterburnerCommandSwitch(
             return None
         return raw_bool(state.raw, [self.entity_description.key])
 
-    async def async_turn_on(self, **kwargs) -> None:
+    async def async_turn_on(self, **kwargs: Any) -> None:
         await self.coordinator._api.async_send_json(
             {self.entity_description.key: 1}
         )
 
-    async def async_turn_off(self, **kwargs) -> None:
+    async def async_turn_off(self, **kwargs: Any) -> None:
         await self.coordinator._api.async_send_json(
             {self.entity_description.key: 0}
         )

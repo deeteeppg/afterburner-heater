@@ -11,16 +11,20 @@ import logging
 from typing import Any
 
 import aiohttp
+import async_timeout
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from ..protocol import DEFAULT_WS_PATH
+from ..protocol import DEFAULT_WS_PATH, DEFAULT_WS_COMMAND_TIMEOUT
 from .base import HeaterApi, MessageCallback
 
 _LOGGER = logging.getLogger(__name__)
 
 _MAX_BACKOFF = 30
+_WS_CONNECT_TIMEOUT = 10
+_HEARTBEAT_INTERVAL = 30  # seconds
+_HEARTBEAT_TIMEOUT = 10  # seconds to wait for pong
 
 
 class WebSocketHeaterApi(HeaterApi):
@@ -47,6 +51,7 @@ class WebSocketHeaterApi(HeaterApi):
         self._ws: aiohttp.ClientWebSocketResponse | None = None
         self._task: asyncio.Task | None = None
         self._stop_event = asyncio.Event()
+        self._send_lock = asyncio.Lock()
 
     async def async_start(self) -> None:
         """Start WebSocket background task."""
@@ -66,9 +71,11 @@ class WebSocketHeaterApi(HeaterApi):
 
     async def async_send_json(self, payload: dict[str, Any]) -> None:
         """Send JSON payload over WebSocket."""
-        if not self._ws or self._ws.closed:
-            raise ConnectionError("WebSocket not connected")
-        await self._ws.send_str(json.dumps(payload))
+        async with self._send_lock:
+            if not self._ws or self._ws.closed:
+                raise ConnectionError("WebSocket not connected")
+            async with async_timeout.timeout(DEFAULT_WS_COMMAND_TIMEOUT):
+                await self._ws.send_str(json.dumps(payload))
 
     async def async_request_refresh(self) -> None:
         """Optionally request a state refresh."""
@@ -107,7 +114,8 @@ class WebSocketHeaterApi(HeaterApi):
         headers = {}
         if self._token:
             headers["Authorization"] = f"Bearer {self._token}"
-        self._ws = await self._session.ws_connect(url, headers=headers)
+        async with async_timeout.timeout(_WS_CONNECT_TIMEOUT):
+            self._ws = await self._session.ws_connect(url, headers=headers)
         if self._init_message:
             await self._ws.send_json(self._init_message)
             _LOGGER.debug("WebSocket init sent: %s", self._init_message)
@@ -120,17 +128,48 @@ class WebSocketHeaterApi(HeaterApi):
     async def _listen(self) -> None:
         if not self._ws:
             return
-        async for msg in self._ws:
-            if msg.type == aiohttp.WSMsgType.TEXT:
-                decoded = _decode_payload(msg.data)
-                if decoded is not None:
-                    _log_payload(decoded)
-                    self._handle_message(decoded)
-            elif msg.type == aiohttp.WSMsgType.ERROR:
-                _LOGGER.debug("WebSocket error: %s", self._ws.exception())
-                break
-            elif msg.type == aiohttp.WSMsgType.CLOSED:
-                break
+
+        async def _heartbeat() -> None:
+            """Send periodic pings to keep connection alive."""
+            while self._ws and not self._ws.closed:
+                try:
+                    await asyncio.sleep(_HEARTBEAT_INTERVAL)
+                    if self._ws and not self._ws.closed:
+                        async with async_timeout.timeout(_HEARTBEAT_TIMEOUT):
+                            await self._ws.ping()
+                            _LOGGER.debug("WebSocket heartbeat ping sent")
+                except asyncio.TimeoutError:
+                    _LOGGER.warning("WebSocket heartbeat timeout, closing connection")
+                    if self._ws and not self._ws.closed:
+                        await self._ws.close()
+                    break
+                except asyncio.CancelledError:
+                    break
+                except Exception as err:  # noqa: BLE001
+                    _LOGGER.debug("WebSocket heartbeat error: %s", err)
+                    break
+
+        heartbeat_task = asyncio.create_task(_heartbeat())
+        try:
+            async for msg in self._ws:
+                if msg.type == aiohttp.WSMsgType.TEXT:
+                    decoded = _decode_payload(msg.data)
+                    if decoded is not None:
+                        _log_payload(decoded)
+                        self._handle_message(decoded)
+                elif msg.type == aiohttp.WSMsgType.ERROR:
+                    _LOGGER.debug("WebSocket error: %s", self._ws.exception())
+                    break
+                elif msg.type == aiohttp.WSMsgType.CLOSED:
+                    break
+                elif msg.type == aiohttp.WSMsgType.PONG:
+                    _LOGGER.debug("WebSocket pong received")
+        finally:
+            heartbeat_task.cancel()
+            try:
+                await heartbeat_task
+            except asyncio.CancelledError:
+                pass
 
 
 def _decode_payload(data: str) -> dict[str, Any] | None:

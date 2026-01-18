@@ -13,6 +13,7 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -29,13 +30,11 @@ PRESET_MODES = ["Standard", "Deadband", "Linear Hz", "Stop/Start"]
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry,
+    entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Afterburner Heater climate."""
-    coordinator: AfterburnerCoordinator = hass.data[DOMAIN][entry.entry_id][
-        "coordinator"
-    ]
+    coordinator: AfterburnerCoordinator = entry.runtime_data.coordinator
     async_add_entities([AfterburnerClimate(coordinator, entry)])
 
 
@@ -43,7 +42,7 @@ class AfterburnerClimate(CoordinatorEntity[AfterburnerCoordinator], ClimateEntit
     """Climate entity for Afterburner Heater."""
 
     _attr_has_entity_name = True
-    _attr_name = "Heater"
+    _attr_translation_key = "heater"
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_hvac_modes = [HVACMode.OFF, HVACMode.HEAT]
     _attr_supported_features = (
@@ -58,7 +57,7 @@ class AfterburnerClimate(CoordinatorEntity[AfterburnerCoordinator], ClimateEntit
     def __init__(
         self,
         coordinator: AfterburnerCoordinator,
-        entry,
+        entry: ConfigEntry,
     ) -> None:
         """Initialize the climate entity."""
         super().__init__(coordinator)

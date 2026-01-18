@@ -9,6 +9,7 @@ import json
 import logging
 from typing import Any
 
+import async_timeout
 import voluptuous as vol
 
 from homeassistant import config_entries
@@ -22,6 +23,7 @@ from homeassistant.const import (
     CONF_SCAN_INTERVAL,
 )
 from homeassistant.core import callback
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
     CHAR_WRITE_ALT_UUID,
@@ -126,6 +128,25 @@ class AfterburnerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         host = user_input[CONF_HOST]
         port = user_input.get(CONF_PORT, DEFAULT_WS_PORT)
+        path = user_input.get(CONF_PATH, DEFAULT_WS_PATH)
+        token = user_input.get(CONF_ACCESS_TOKEN)
+
+        # Test WebSocket connection before creating entry
+        if not await self._test_websocket_connection(host, port, path, token):
+            errors["base"] = "cannot_connect"
+            return self.async_show_form(
+                step_id="websocket",
+                data_schema=vol.Schema(
+                    {
+                        vol.Required(CONF_HOST, default=host): str,
+                        vol.Optional(CONF_PORT, default=port): int,
+                        vol.Optional(CONF_PATH, default=path): str,
+                        vol.Optional(CONF_ACCESS_TOKEN): str,
+                    }
+                ),
+                errors=errors,
+            )
+
         unique = f"ws_{host}:{port}"
         await self.async_set_unique_id(unique)
         self._abort_if_unique_id_configured()
@@ -136,10 +157,31 @@ class AfterburnerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 CONF_TRANSPORT: TRANSPORT_WEBSOCKET,
                 CONF_HOST: host,
                 CONF_PORT: port,
-                CONF_PATH: user_input.get(CONF_PATH, DEFAULT_WS_PATH),
-                CONF_ACCESS_TOKEN: user_input.get(CONF_ACCESS_TOKEN),
+                CONF_PATH: path,
+                CONF_ACCESS_TOKEN: token,
             },
         )
+
+    async def _test_websocket_connection(
+        self, host: str, port: int, path: str, token: str | None
+    ) -> bool:
+        """Test WebSocket connection to verify host is reachable."""
+        if not path.startswith("/"):
+            path = f"/{path}"
+        url = f"ws://{host}:{port}{path}"
+        headers = {}
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+
+        session = async_get_clientsession(self.hass)
+        try:
+            async with async_timeout.timeout(10):
+                async with session.ws_connect(url, headers=headers) as ws:
+                    await ws.close()
+            return True
+        except Exception as err:  # noqa: BLE001
+            _LOGGER.debug("WebSocket connection test failed: %s", err)
+            return False
 
     @callback
     def _ble_schema(self) -> vol.Schema:

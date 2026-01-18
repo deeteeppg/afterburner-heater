@@ -28,13 +28,13 @@ async def async_get_config_entry_diagnostics(
     hass: HomeAssistant, entry: ConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
-    data = hass.data[DOMAIN][entry.entry_id]
-    coordinator = data["coordinator"]
+    runtime_data = entry.runtime_data
+    coordinator = runtime_data.coordinator
 
     return {
-        "entry": _redact_sensitive(entry.data),
-        "options": _redact_sensitive(entry.options),
-        "transport": data.get("transport"),
+        "entry": _redact_sensitive(dict(entry.data)),
+        "options": _redact_sensitive(dict(entry.options)),
+        "transport": runtime_data.transport,
         "ws_init_message": entry.options.get("ws_init_message"),
         "ble_init_message": entry.options.get("ble_init_message"),
         "ble_append_newline": entry.options.get("ble_append_newline"),

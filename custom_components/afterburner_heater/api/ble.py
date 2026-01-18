@@ -168,9 +168,10 @@ class BleHeaterApi(HeaterApi):
                 self._note_refresh_message()
                 self._handle_message(decoded)
 
-        await self._client.start_notify(
-            _format_uuid(CHAR_NOTIFY_UUID), _handle_notify
-        )
+        async with async_timeout.timeout(DEFAULT_BLE_CONNECT_TIMEOUT):
+            await self._client.start_notify(
+                _format_uuid(CHAR_NOTIFY_UUID), _handle_notify
+            )
         await asyncio.sleep(_REFRESH_DELAY)
         await self.async_request_refresh()
         try:

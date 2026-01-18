@@ -12,6 +12,7 @@ from homeassistant.components.binary_sensor import (
     BinarySensorEntityDescription,
     BinarySensorDeviceClass,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -24,19 +25,19 @@ from ..protocol import HeaterState, raw_bool
 BINARY_SENSOR_DESCRIPTIONS: tuple[BinarySensorEntityDescription, ...] = (
     BinarySensorEntityDescription(
         key="RunReq",
-        name="Run Request",
+        translation_key="RunReq",
         device_class=BinarySensorDeviceClass.RUNNING,
         icon="mdi:run",
     ),
     BinarySensorEntityDescription(
         key="FrostRun",
-        name="Frost Active",
+        translation_key="FrostRun",
         device_class=BinarySensorDeviceClass.RUNNING,
         icon="mdi:snowflake",
     ),
     BinarySensorEntityDescription(
         key="FrostHold",
-        name="Frost Hold",
+        translation_key="FrostHold",
         device_class=BinarySensorDeviceClass.RUNNING,
         icon="mdi:clock-outline",
     ),
@@ -45,13 +46,11 @@ BINARY_SENSOR_DESCRIPTIONS: tuple[BinarySensorEntityDescription, ...] = (
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry,
+    entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Afterburner Heater binary sensors."""
-    coordinator: AfterburnerCoordinator = hass.data[DOMAIN][entry.entry_id][
-        "coordinator"
-    ]
+    coordinator: AfterburnerCoordinator = entry.runtime_data.coordinator
     async_add_entities(
         AfterburnerBinarySensor(coordinator, entry, description)
         for description in BINARY_SENSOR_DESCRIPTIONS
@@ -68,7 +67,7 @@ class AfterburnerBinarySensor(
     def __init__(
         self,
         coordinator: AfterburnerCoordinator,
-        entry,
+        entry: ConfigEntry,
         description: BinarySensorEntityDescription,
     ) -> None:
         super().__init__(coordinator)

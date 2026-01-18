@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import cast
 
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -23,12 +24,12 @@ FROST_MODE_OPTIONS = ["Off", "Start/Stop", "System Thermostat", "Frost Thermosta
 SELECT_DESCRIPTIONS: tuple[SelectEntityDescription, ...] = (
     SelectEntityDescription(
         key="ThermostatMode",
-        name="Thermostat Mode",
+        translation_key="ThermostatMode",
         options=THERMOSTAT_MODE_OPTIONS,
     ),
     SelectEntityDescription(
         key="FrostMode",
-        name="Frost Mode",
+        translation_key="FrostMode",
         options=FROST_MODE_OPTIONS,
     ),
 )
@@ -36,13 +37,11 @@ SELECT_DESCRIPTIONS: tuple[SelectEntityDescription, ...] = (
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry,
+    entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Afterburner Heater selects."""
-    coordinator: AfterburnerCoordinator = hass.data[DOMAIN][entry.entry_id][
-        "coordinator"
-    ]
+    coordinator: AfterburnerCoordinator = entry.runtime_data.coordinator
     async_add_entities(
         AfterburnerSelect(coordinator, entry, description)
         for description in SELECT_DESCRIPTIONS
@@ -57,7 +56,7 @@ class AfterburnerSelect(CoordinatorEntity[AfterburnerCoordinator], SelectEntity)
     def __init__(
         self,
         coordinator: AfterburnerCoordinator,
-        entry,
+        entry: ConfigEntry,
         description: SelectEntityDescription,
     ) -> None:
         super().__init__(coordinator)

@@ -194,6 +194,49 @@ logger:
 - Messages are JSON objects
 - Heater pushes periodic updates automatically
 
+## Removal
+
+To remove the integration:
+
+1. Go to **Settings → Devices & Services**
+2. Find **Afterburner Heater** in the list
+3. Click the three-dot menu and select **Delete**
+4. Optionally, remove the component files from `custom_components/afterburner_heater/`
+
+If installed via HACS, you can also uninstall through HACS.
+
+## Supported Devices
+
+This integration is designed for Afterburner-branded diesel heaters with BLE/WiFi capability:
+
+- Afterburner heaters with ESP32 controller
+- Devices exposing BLE service UUID `FFE0`
+- Devices with WebSocket API on port 81
+
+## Data Update Mechanism
+
+The integration uses a **push-based** update model:
+
+- **BLE**: Heater sends notifications for state changes. The integration also polls periodically (default: 30s) to ensure complete state sync.
+- **WebSocket**: Heater pushes updates automatically. Periodic refresh requests (default: 60s) ensure stale data is refreshed.
+
+Periodic sensor updates (WiFi signal, humidity, pressure) arrive every 10-13 seconds regardless of the poll interval.
+
+## Known Limitations
+
+| Feature | BLE | WebSocket |
+|---------|-----|-----------|
+| Response time | ~113ms | ~400ms |
+| Range | Bluetooth range (~10m) | Network range |
+| Connection stability | May drop if obstructed | More stable |
+| Power consumption | Lower on heater | Higher due to WiFi |
+| Simultaneous connections | 1 device only | Multiple supported |
+
+**Notes:**
+- BLE connections are exclusive - only one device can connect at a time
+- WebSocket requires the heater's WiFi to be configured and connected
+- Some older firmware versions may have incomplete JSON payloads
+
 ## License
 
 This project is provided as-is for personal use with Afterburner heaters.

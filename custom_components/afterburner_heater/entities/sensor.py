@@ -5,14 +5,17 @@ https://github.com/tonylofgren/aurora-smart-home
 """
 from __future__ import annotations
 
-from typing import cast
+from typing import Any, cast
 
 from homeassistant.components.sensor import (
     SensorEntity,
     SensorEntityDescription,
     SensorDeviceClass,
+    SensorStateClass,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
+    EntityCategory,
     PERCENTAGE,
     UnitOfElectricPotential,
     UnitOfFrequency,
@@ -26,167 +29,171 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from ..const import DOMAIN
 from ..coordinator import AfterburnerCoordinator
-from ..protocol import HeaterState, state_text_from_raw
+from ..protocol import HeaterState
 
 SENSOR_DESCRIPTIONS: tuple[SensorEntityDescription, ...] = (
     SensorEntityDescription(
-        key="humidity",
-        name="Humidity",
+        key="Humidity",
+        translation_key="Humidity",
         native_unit_of_measurement=PERCENTAGE,
         device_class=SensorDeviceClass.HUMIDITY,
-    ),
-    SensorEntityDescription(
-        key="temperature",
-        name="Temperature",
-        # TODO: Confirm temperature unit from device payload.
-        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
-        device_class=SensorDeviceClass.TEMPERATURE,
-    ),
-    SensorEntityDescription(
-        key="voltage",
-        name="Voltage",
-        native_unit_of_measurement=UnitOfElectricPotential.VOLT,
-        device_class=SensorDeviceClass.VOLTAGE,
-    ),
-    SensorEntityDescription(
-        key="state_text",
-        name="State",
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_registry_enabled_default=False,  # Noisy sensor
     ),
     SensorEntityDescription(
         key="TempCurrent",
-        name="Actual Temperature",
+        translation_key="TempCurrent",
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         device_class=SensorDeviceClass.TEMPERATURE,
+        state_class=SensorStateClass.MEASUREMENT,
     ),
     SensorEntityDescription(
         key="TempDesired",
-        name="Desired Temperature",
+        translation_key="TempDesired",
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         device_class=SensorDeviceClass.TEMPERATURE,
+        state_class=SensorStateClass.MEASUREMENT,
     ),
     SensorEntityDescription(
         key="TempBody",
-        name="Heater Temperature",
+        translation_key="TempBody",
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         device_class=SensorDeviceClass.TEMPERATURE,
+        state_class=SensorStateClass.MEASUREMENT,
     ),
     SensorEntityDescription(
         key="Temp1Current",
-        name="Sensor Thermostat",
+        translation_key="Temp1Current",
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         device_class=SensorDeviceClass.TEMPERATURE,
+        state_class=SensorStateClass.MEASUREMENT,
     ),
     SensorEntityDescription(
         key="Temp4Current",
-        name="Sensor BME280",
+        translation_key="Temp4Current",
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         device_class=SensorDeviceClass.TEMPERATURE,
+        state_class=SensorStateClass.MEASUREMENT,
     ),
     SensorEntityDescription(
         key="InputVoltage",
-        name="Input Voltage",
+        translation_key="InputVoltage",
         native_unit_of_measurement=UnitOfElectricPotential.VOLT,
         device_class=SensorDeviceClass.VOLTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
     ),
     SensorEntityDescription(
         key="SystemVoltage",
-        name="System Voltage",
+        translation_key="SystemVoltage",
         native_unit_of_measurement=UnitOfElectricPotential.VOLT,
         device_class=SensorDeviceClass.VOLTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
     ),
     SensorEntityDescription(
         key="GlowVoltage",
-        name="Glow Plug Voltage",
+        translation_key="GlowVoltage",
         native_unit_of_measurement=UnitOfElectricPotential.VOLT,
         device_class=SensorDeviceClass.VOLTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
     ),
     SensorEntityDescription(
         key="GlowCurrent",
-        name="Glow Plug Current",
+        translation_key="GlowCurrent",
         native_unit_of_measurement="A",
         device_class=SensorDeviceClass.CURRENT,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
     ),
     SensorEntityDescription(
         key="FanRPM",
-        name="Fan Speed",
+        translation_key="FanRPM",
         native_unit_of_measurement="RPM",
+        state_class=SensorStateClass.MEASUREMENT,
     ),
     SensorEntityDescription(
         key="PumpActual",
-        name="Actual Pump Speed",
+        translation_key="PumpActual",
         native_unit_of_measurement=UnitOfFrequency.HERTZ,
         device_class=SensorDeviceClass.FREQUENCY,
+        state_class=SensorStateClass.MEASUREMENT,
     ),
     SensorEntityDescription(
         key="PumpFixed",
-        name="Desired Pump Speed",
+        translation_key="PumpFixed",
         native_unit_of_measurement=UnitOfFrequency.HERTZ,
         device_class=SensorDeviceClass.FREQUENCY,
+        state_class=SensorStateClass.MEASUREMENT,
     ),
     SensorEntityDescription(
         key="FuelUsage",
-        name="Fuel Used",
-        # TODO: Confirm fuel units and map to unit of volume.
-        native_unit_of_measurement=None,
+        translation_key="FuelUsage",
+        state_class=SensorStateClass.TOTAL_INCREASING,
     ),
     SensorEntityDescription(
         key="TotalFuelUsage",
-        name="Total Fuel Used",
-        # TODO: Confirm fuel units and map to unit of volume.
-        native_unit_of_measurement=None,
+        translation_key="TotalFuelUsage",
+        state_class=SensorStateClass.TOTAL_INCREASING,
     ),
     SensorEntityDescription(
         key="FuelRate",
-        name="Fuel Rate",
-        # TODO: Confirm fuel rate units.
-        native_unit_of_measurement=None,
+        translation_key="FuelRate",
+        state_class=SensorStateClass.MEASUREMENT,
     ),
     SensorEntityDescription(
         key="FrostRise",
-        name="Frost Rise",
+        translation_key="FrostRise",
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         device_class=SensorDeviceClass.TEMPERATURE,
+        state_class=SensorStateClass.MEASUREMENT,
     ),
     SensorEntityDescription(
         key="Altitude",
-        name="Altitude",
+        translation_key="Altitude",
         native_unit_of_measurement="m",
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
     ),
     SensorEntityDescription(
         key="FuelAlarm",
-        name="Fuel Status",
+        translation_key="FuelAlarm",
     ),
     SensorEntityDescription(
         key="RunString",
-        name="Heater State",
+        translation_key="RunString",
     ),
     SensorEntityDescription(
         key="ErrorString",
-        name="Error State",
+        translation_key="ErrorString",
+        entity_category=EntityCategory.DIAGNOSTIC,
     ),
     SensorEntityDescription(
         key="GPanlg",
-        name="Analogue Input",
+        translation_key="GPanlg",
         native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
     ),
     SensorEntityDescription(
         key="Pressure",
-        name="Pressure",
+        translation_key="Pressure",
         native_unit_of_measurement=UnitOfPressure.HPA,
         device_class=SensorDeviceClass.PRESSURE,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_registry_enabled_default=False,  # Noisy sensor
     ),
 )
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry,
+    entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Afterburner Heater sensors."""
-    coordinator: AfterburnerCoordinator = hass.data[DOMAIN][entry.entry_id][
-        "coordinator"
-    ]
+    coordinator: AfterburnerCoordinator = entry.runtime_data.coordinator
     async_add_entities(
         AfterburnerSensor(coordinator, entry, description)
         for description in SENSOR_DESCRIPTIONS
@@ -203,7 +210,7 @@ class AfterburnerSensor(
     def __init__(
         self,
         coordinator: AfterburnerCoordinator,
-        entry,
+        entry: ConfigEntry,
         description: SensorEntityDescription,
     ) -> None:
         super().__init__(coordinator)
@@ -216,12 +223,8 @@ class AfterburnerSensor(
         )
 
     @property
-    def native_value(self):
+    def native_value(self) -> Any:
         state = cast(HeaterState | None, self.coordinator.data)
         if state is None:
             return None
-        if self.entity_description.key == "state_text":
-            return state_text_from_raw(state.raw)
-        if self.entity_description.key in state.raw:
-            return state.raw[self.entity_description.key]
-        return getattr(state, self.entity_description.key, None)
+        return state.raw.get(self.entity_description.key)

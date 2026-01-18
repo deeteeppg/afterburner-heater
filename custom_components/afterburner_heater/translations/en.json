@@ -28,7 +28,8 @@
       }
     },
     "error": {
-      "invalid_address": "Invalid Bluetooth address"
+      "invalid_address": "Invalid Bluetooth address",
+      "cannot_connect": "Cannot connect to device"
     },
     "abort": {
       "already_configured": "Device is already configured"
@@ -48,6 +49,62 @@
           "ws_init_message": "WebSocket init JSON"
         }
       }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "Humidity": { "name": "Humidity" },
+      "TempCurrent": { "name": "Actual Temperature" },
+      "TempDesired": { "name": "Desired Temperature" },
+      "TempBody": { "name": "Heater Temperature" },
+      "Temp1Current": { "name": "Sensor Thermostat" },
+      "Temp4Current": { "name": "Sensor BME280" },
+      "InputVoltage": { "name": "Input Voltage" },
+      "SystemVoltage": { "name": "System Voltage" },
+      "GlowVoltage": { "name": "Glow Plug Voltage" },
+      "GlowCurrent": { "name": "Glow Plug Current" },
+      "FanRPM": { "name": "Fan Speed" },
+      "PumpActual": { "name": "Actual Pump Speed" },
+      "PumpFixed": { "name": "Desired Pump Speed" },
+      "FuelUsage": { "name": "Fuel Used" },
+      "TotalFuelUsage": { "name": "Total Fuel Used" },
+      "FuelRate": { "name": "Fuel Rate" },
+      "FrostRise": { "name": "Frost Rise" },
+      "Altitude": { "name": "Altitude" },
+      "FuelAlarm": { "name": "Fuel Status" },
+      "RunString": { "name": "Heater State" },
+      "ErrorString": { "name": "Error State" },
+      "GPanlg": { "name": "Analogue Input" },
+      "Pressure": { "name": "Pressure" }
+    },
+    "binary_sensor": {
+      "RunReq": { "name": "Run Request" },
+      "FrostRun": { "name": "Frost Active" },
+      "FrostHold": { "name": "Frost Hold" }
+    },
+    "switch": {
+      "power": { "name": "Power" },
+      "CyclicEnb": { "name": "Cyclic Enable" },
+      "FrostEnable": { "name": "Frost Enable" },
+      "Thermostat": { "name": "Thermostat Enable" },
+      "GPout1": { "name": "GP Out 1" },
+      "GPout2": { "name": "GP Out 2" }
+    },
+    "select": {
+      "ThermostatMode": { "name": "Thermostat Mode" },
+      "FrostMode": { "name": "Frost Mode" }
+    },
+    "number": {
+      "CyclicTemp": { "name": "Cyclic Temperature" },
+      "CyclicOn": { "name": "Cyclic On Offset" },
+      "CyclicOff": { "name": "Cyclic Off Offset" },
+      "FrostOn": { "name": "Frost Start Temperature" },
+      "FrostRise": { "name": "Frost Rise" },
+      "FrostTarget": { "name": "Frost Target Temperature" },
+      "FixedDemand": { "name": "Set Power Demand" }
+    },
+    "climate": {
+      "heater": { "name": "Heater" }
     }
   }
 }

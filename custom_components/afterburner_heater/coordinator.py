@@ -8,10 +8,12 @@ from __future__ import annotations
 import logging
 import time
 from collections import deque
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import timedelta
+from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .api.base import HeaterApi
@@ -30,11 +32,7 @@ class TransportHealth:
     message_count: int = 0
     last_message_time: float | None = None
     last_refresh_time: float | None = None
-    refresh_latencies: deque = None  # type: ignore[assignment]
-
-    def __post_init__(self) -> None:
-        if self.refresh_latencies is None:
-            self.refresh_latencies = deque(maxlen=_LATENCY_WINDOW_SIZE)
+    refresh_latencies: deque[float] = field(default_factory=lambda: deque(maxlen=_LATENCY_WINDOW_SIZE))
 
     @property
     def avg_latency_ms(self) -> float | None:
@@ -58,7 +56,7 @@ class AfterburnerCoordinator(DataUpdateCoordinator[HeaterState]):
 
     def __init__(
         self,
-        hass,
+        hass: HomeAssistant,
         entry: ConfigEntry,
         api: HeaterApi,
         update_interval: timedelta,
@@ -87,7 +85,7 @@ class AfterburnerCoordinator(DataUpdateCoordinator[HeaterState]):
         """Stop the transport."""
         await self._api.async_stop()
 
-    def handle_message(self, payload: dict) -> None:
+    def handle_message(self, payload: dict[str, Any]) -> None:
         """Handle new payloads from the transport."""
         now = time.monotonic()
         self._health.message_count += 1

@@ -7,7 +7,14 @@ from __future__ import annotations
 
 from typing import cast
 
-from homeassistant.components.number import NumberEntity, NumberEntityDescription
+from homeassistant.components.number import (
+    NumberDeviceClass,
+    NumberEntity,
+    NumberEntityDescription,
+    NumberMode,
+)
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -20,44 +27,76 @@ from ..protocol import HeaterState
 NUMBER_DESCRIPTIONS: tuple[NumberEntityDescription, ...] = (
     NumberEntityDescription(
         key="CyclicTemp",
-        name="Cyclic Temperature",
+        translation_key="CyclicTemp",
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        device_class=NumberDeviceClass.TEMPERATURE,
+        native_min_value=-20,
+        native_max_value=40,
+        native_step=0.5,
     ),
     NumberEntityDescription(
         key="CyclicOn",
-        name="Cyclic On Offset",
+        translation_key="CyclicOn",
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        device_class=NumberDeviceClass.TEMPERATURE,
+        native_min_value=-10,
+        native_max_value=10,
+        native_step=0.5,
     ),
     NumberEntityDescription(
         key="CyclicOff",
-        name="Cyclic Off Offset",
+        translation_key="CyclicOff",
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        device_class=NumberDeviceClass.TEMPERATURE,
+        native_min_value=-10,
+        native_max_value=10,
+        native_step=0.5,
     ),
     NumberEntityDescription(
         key="FrostOn",
-        name="Frost Start Temperature",
+        translation_key="FrostOn",
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        device_class=NumberDeviceClass.TEMPERATURE,
+        native_min_value=-20,
+        native_max_value=10,
+        native_step=0.5,
     ),
     NumberEntityDescription(
         key="FrostRise",
-        name="Frost Rise",
+        translation_key="FrostRise",
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        device_class=NumberDeviceClass.TEMPERATURE,
+        native_min_value=0,
+        native_max_value=20,
+        native_step=0.5,
     ),
     NumberEntityDescription(
         key="FrostTarget",
-        name="Frost Target Temperature",
+        translation_key="FrostTarget",
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        device_class=NumberDeviceClass.TEMPERATURE,
+        native_min_value=-10,
+        native_max_value=20,
+        native_step=0.5,
     ),
     NumberEntityDescription(
         key="FixedDemand",
-        name="Set Power Demand",
+        translation_key="FixedDemand",
+        native_min_value=0,
+        native_max_value=100,
+        native_step=1,
+        mode=NumberMode.SLIDER,
     ),
 )
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry,
+    entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Afterburner Heater numbers."""
-    coordinator: AfterburnerCoordinator = hass.data[DOMAIN][entry.entry_id][
-        "coordinator"
-    ]
+    coordinator: AfterburnerCoordinator = entry.runtime_data.coordinator
     async_add_entities(
         AfterburnerNumber(coordinator, entry, description)
         for description in NUMBER_DESCRIPTIONS
@@ -68,12 +107,11 @@ class AfterburnerNumber(CoordinatorEntity[AfterburnerCoordinator], NumberEntity)
     """Representation of an Afterburner Heater number."""
 
     _attr_has_entity_name = True
-    _attr_native_step = 0.1
 
     def __init__(
         self,
         coordinator: AfterburnerCoordinator,
-        entry,
+        entry: ConfigEntry,
         description: NumberEntityDescription,
     ) -> None:
         super().__init__(coordinator)
